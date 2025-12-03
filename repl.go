@@ -7,7 +7,7 @@ func cleanInput(text string) []string {
 	result := []string{}
 	for _, t := range split_text {
 		if len(t) > 0 {
-			result = append(result, t)
+			result = append(result, strings.ToLower(t))
 		}
 	}
 
