@@ -62,6 +62,11 @@ func main() {
 			description: "List pokemon in pokedex",
 			callback:    commandPokedex,
 		},
+		"inspect": {
+			name: 	 	 "inspect",
+			description: "Inspect a pokemon in pokedex",
+			callback:    commandInspect,
+		},
 		"exit": {
 			name:        "exit",
 			description: "Exit the pokedex",
@@ -261,24 +266,37 @@ func commandCatch(conf *config, args []string) error {
 	return nil
 }
 
-func printPokedexInfo(pokemon poke_Pokemon) {
-	fmt.Printf("Name: %v\n", pokemon.Name)
-	fmt.Printf(" - ID: %v\n", pokemon.Id)
-	fmt.Printf(" - Height: %v\n", pokemon.Height)
-	fmt.Printf(" - Weight: %v\n", pokemon.Weight)
+func commandPokedex(conf *config, args []string) error {
+	if len(args) == 1 {
+		for _,pokemon := range conf.pokedex {
+			fmt.Printf(" - %v\n", pokemon.Name)
+		}
+	} else {
+		return fmt.Errorf(
+			"Incorrect number of arguments, expecting '%v [<pokemon>]'",
+			args[0])
+	}
+
+	return nil
 }
 
-func commandPokedex(conf *config, args []string) error {
+func commandInspect(conf *config, args []string) error {
 	if len(args) == 2 {
-		pokemon := args[1]
-		info,ok := conf.pokedex[pokemon]
+		pokemon_name := args[1]
+		pokemon,ok := conf.pokedex[pokemon_name]
 		if !ok {
-			return fmt.Errorf("%v not found in pokedex", pokemon)
+			return fmt.Errorf("you have not caught that pokemon")
 		}
-		printPokedexInfo(info)
-	} else if len(args) == 1 {
-		for _,info := range conf.pokedex {
-			printPokedexInfo(info)
+		fmt.Printf("Name: %v\n", pokemon.Name)
+		fmt.Printf("Height: %v\n", pokemon.Height)
+		fmt.Printf("Weight: %v\n", pokemon.Weight)
+		fmt.Printf("Stats:\n")
+		for _,stat := range pokemon.Stats {
+			fmt.Printf(" - %v: %v\n", stat.Stat.Name, stat.Base_stat)
+		}
+		fmt.Printf("Types:\n")
+		for _,pokeType := range pokemon.Types {
+			fmt.Printf(" - %v\n", pokeType.Type.Name)
 		}
 	} else {
 		return fmt.Errorf(
