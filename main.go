@@ -11,10 +11,12 @@ import (
 	"time"
 )
 
+const API_URL = "https://pokeapi.co/api/v2/"
+
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, []string) error
 }
 
 type config struct {
@@ -43,6 +45,11 @@ func main() {
 			description: "Displays previous 20 locations",
 			callback:    commandMapb,
 		},
+		"explore": {
+			name: 	 	 "explore",
+			description: "List all the pokemon in a location",
+			callback:    commandExplore,
+		},
 		"exit": {
 			name:        "exit",
 			description: "Exit the pokedex",
@@ -54,8 +61,8 @@ func main() {
 
 	conf := config{
 		prev_url: "",
-		next_url: "https://pokeapi.co/api/v2/location-area/?offset=0&limit=20",
-		cache: pokecache.NewCache(time.Second * 5),
+		next_url: API_URL + "location-area/?offset=0&limit=20",
+		cache: pokecache.NewCache(time.Minute * 5),
 	}
 	for {
 		fmt.Print("Pokedex > ")
@@ -66,7 +73,7 @@ func main() {
 			if len(command_line) > 0 {
 				command, ok := commands[command_line[0]]
 				if ok {
-					err := command.callback(&conf)
+					err := command.callback(&conf, command_line)
 					if err != nil {
 						fmt.Printf("Error: %v\n", err)
 					}
@@ -83,13 +90,13 @@ func main() {
 
 // https://pokeapi.co/api/v2/location-area/{id or name}/
 
-func commandExit(conf *config) error {
+func commandExit(conf *config, args []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return fmt.Errorf("Failed to exit program")
 }
 
-func commandHelp(conf *config) error {
+func commandHelp(conf *config, args []string) error {
 	fmt.Printf("Welcome to the Pokedex!\n")
 	fmt.Printf("\n")
 	fmt.Printf("Usage:\n")
@@ -97,18 +104,6 @@ func commandHelp(conf *config) error {
 		fmt.Printf("%v: %v\n", command.name, command.description)
 	}
 	return nil
-}
-
-type poke_NamedAPIResource struct {
-	Name string `json:name`
-	Url  string `json:url`
-}
-
-type poke_NamedAPIResourceList struct {
-	Count    int                     `json:const`
-	Previous string                  `json:previous`
-	Next     string                  `json:next`
-	Results  []poke_NamedAPIResource `json:results`
 }
 
 func fetchAndDecodeJson(url string, v any, cache pokecache.Cache) error {
@@ -130,9 +125,13 @@ func fetchAndDecodeJson(url string, v any, cache pokecache.Cache) error {
 		if err != nil {
 			return err
 		}
+
+		// todo: check Cache-Control header
+		// todo: cache non-200 responses
+		// https://developer.mozilla.org/en-US/docs/Glossary/Cacheable
 		cache.Add(url, body)
 	} else {
-		//fmt.Printf("Got %v from cache\n", url)
+		fmt.Printf("Got %v from cache\n", url)
 	}
 
 	err := json.Unmarshal(body, v)
@@ -143,7 +142,7 @@ func fetchAndDecodeJson(url string, v any, cache pokecache.Cache) error {
 	return nil
 }
 
-func commandMap(conf *config) error {
+func commandMap(conf *config, args []string) error {
 	if conf.next_url == "" {
 		fmt.Println("You're on the last page")
 		return nil
@@ -166,7 +165,7 @@ func commandMap(conf *config) error {
 	return nil
 }
 
-func commandMapb(conf *config) error {
+func commandMapb(conf *config, args []string) error {
 	if conf.prev_url == "" {
 		fmt.Println("You're on the first page")
 		return nil
@@ -184,6 +183,34 @@ func commandMapb(conf *config) error {
 
 	for _, resource := range resourceList.Results {
 		fmt.Printf("%s\n", resource.Name)
+	}
+
+	return nil
+}
+
+func commandExplore(conf *config, args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("Incorrect number of arguments, expecting '%v <area>'", args[0])
+	}
+
+	area_name := args[1]
+
+	fmt.Printf("Exploring %v...\n", area_name)
+
+	area := poke_LocationArea{}
+
+	err := fetchAndDecodeJson(API_URL + "location-area/" + area_name, &area, conf.cache)
+	if err != nil {
+		return fmt.Errorf("Failed to load area '%v': %w", area_name, err)
+	}
+
+	if len(area.Pokemon_encounters) > 0 {
+		fmt.Printf("Found Pokemon:\n")
+		for _, encounter := range area.Pokemon_encounters {
+			fmt.Printf(" - %v\n", encounter.Pokemon.Name)
+		}
+	} else {
+		fmt.Printf("Didn't find any Pokemon in %v\n", area_name)
 	}
 
 	return nil

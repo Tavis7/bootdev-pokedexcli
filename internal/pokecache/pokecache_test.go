@@ -96,6 +96,28 @@ func TestCache(t *testing.T) {
 		},
 	}
 
+	testItems := func (set int, c testCase, mu sync.Mutex, t *testing.T, ch chan any) {
+		cache := NewCache(c.cache_interval)
+		for i, item := range c.items {
+			time.Sleep(item.delay)
+			if item.get {
+				val, ok := cache.Get(item.key)
+
+				if (!slices.Equal(val, item.val) || ok != item.ok) {
+					mu.Lock()
+					t.Errorf("%v:%v: Expected '%v = %v (present:%v)' but got '%v' (present:%v)",
+					set, i,
+					item.key,
+					item.val, item.ok, val, ok)
+					mu.Unlock()
+				}
+			} else {
+				cache.Add(item.key, item.val)
+			}
+		}
+		ch <- struct{}{}
+	}
+
 	mu := sync.Mutex{}
 	ch := make(chan any)
 	for i, c := range cases {
@@ -105,26 +127,5 @@ func TestCache(t *testing.T) {
 	for _ = range cases {
 		<- ch
 	}
-}
 
-func testItems(set int, c testCase, mu sync.Mutex, t *testing.T, ch chan any) {
-	cache := NewCache(c.cache_interval)
-	for i, item := range c.items {
-		time.Sleep(item.delay)
-		if item.get {
-			val, ok := cache.Get(item.key)
-
-			if (!slices.Equal(val, item.val) || ok != item.ok) {
-				mu.Lock()
-				t.Errorf("%v:%v: Expected '%v = %v (present:%v)' but got '%v' (present:%v)",
-				set, i,
-				item.key,
-				item.val, item.ok, val, ok)
-				mu.Unlock()
-			}
-		} else {
-			cache.Add(item.key, item.val)
-		}
-	}
-	ch <- struct{}{}
 }
