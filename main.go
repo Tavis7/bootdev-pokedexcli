@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	//"io"
+	"io"
 	"net/http"
 	"os"
+	"github.com/Tavis7/bootdev-pokedexcli/internal/pokecache"
+	"time"
 )
 
 type cliCommand struct {
@@ -18,11 +20,13 @@ type cliCommand struct {
 type config struct {
 	next_url string
 	prev_url string
+	cache pokecache.Cache
 }
 
 var commands map[string]cliCommand
 
 func main() {
+	pokecache.Test()
 	commands = map[string]cliCommand{
 		"help": {
 			name:        "help",
@@ -50,7 +54,8 @@ func main() {
 
 	conf := config{
 		prev_url: "",
-		next_url: "https://pokeapi.co/api/v2/location-area/?limit=20&offset=0",
+		next_url: "https://pokeapi.co/api/v2/location-area/?offset=0&limit=20",
+		cache: pokecache.NewCache(time.Second * 5),
 	}
 	for {
 		fmt.Print("Pokedex > ")
@@ -106,20 +111,30 @@ type poke_NamedAPIResourceList struct {
 	Results  []poke_NamedAPIResource `json:results`
 }
 
-func fetchAndDecodeJson(url string, v any) error {
-	res, err := http.Get(url)
-	if err != nil {
-		return err
+func fetchAndDecodeJson(url string, v any, cache pokecache.Cache) error {
+	body,ok := cache.Get(url)
+	if !ok {
+		//fmt.Printf("Fetching %v from network\n", url)
+		res, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != 200 {
+			return err
+		}
+
+		body, err = io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		cache.Add(url, body)
+	} else {
+		//fmt.Printf("Got %v from cache\n", url)
 	}
-	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
-		return err
-	}
-
-	decoder := json.NewDecoder(res.Body)
-
-	err = decoder.Decode(v)
+	err := json.Unmarshal(body, v)
 	if err != nil {
 		return err
 	}
@@ -135,7 +150,7 @@ func commandMap(conf *config) error {
 
 	resourceList := poke_NamedAPIResourceList{}
 
-	err := fetchAndDecodeJson(conf.next_url, &resourceList)
+	err := fetchAndDecodeJson(conf.next_url, &resourceList, conf.cache)
 	if err != nil {
 		return fmt.Errorf("command failed: %w", err)
 	}
@@ -158,7 +173,7 @@ func commandMapb(conf *config) error {
 
 	resourceList := poke_NamedAPIResourceList{}
 
-	err := fetchAndDecodeJson(conf.prev_url, &resourceList)
+	err := fetchAndDecodeJson(conf.prev_url, &resourceList, conf.cache)
 	if err != nil {
 		return fmt.Errorf("command failed: %w", err)
 	}
