@@ -122,7 +122,8 @@ func fetchAndDecodeJson(url string, v any, cache pokecache.Cache) error {
 		defer res.Body.Close()
 
 		if res.StatusCode != 200 {
-			return err
+			return fmt.Errorf("Request returned status code %v (expected 200)",
+				res.StatusCode)
 		}
 
 		body, err = io.ReadAll(res.Body)
