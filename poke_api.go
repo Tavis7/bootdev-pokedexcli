@@ -1,5 +1,99 @@
 package main
 
+type poke_Pokemon struct {
+	Id                       int                       `json:id`
+	Name                     string                    `json:name`
+	Base_experience          int                       `json:base_experience`
+	Height                   int                       `json:height` //decimeters
+	Is_default               bool                      `json:is_default`
+	Order                    int                       `json:order`
+	Weight                   int                       `json:weight` //hectograms
+	Abilities                []poke_PokemonAbility     `json:abilities`
+	Forms                    []poke_NamedAPIResource   `json:forms`
+	Game_indices             []poke_VersionGameIndex   `json:game_indices`
+	Held_items               []poke_PokemonHeldItem    `json:held_items`
+	Location_area_encounters string                    `json:location_area_encounters`
+	Moves                    []poke_PokemonMove        `json:moves`
+	Past_types               []poke_PokemonTypePast    `json:past_types`
+	Past_abilities           []poke_PokemonAbilityPast `json:past_abilities`
+	Sprites                  poke_PokemonSprites       `json:sprites`
+	Cries                    poke_PokemonCries         `json:cries`
+	Species                  poke_NamedAPIResource     `json:species`
+	Stats                    []poke_PokemonStat        `json:stats`
+	Types                    []poke_PokemonType        `json:types`
+}
+
+type poke_PokemonAbility struct {
+	Is_hidden bool                  `json:is_hidden`
+	Slot      int                   `json:slot`
+	Ability   poke_NamedAPIResource `json:ability`
+}
+
+type poke_VersionGameIndex struct {
+	Game_index int                   `json:game_index`
+	Version    poke_NamedAPIResource `json:version`
+}
+
+type poke_PokemonHeldItem struct {
+	Item            poke_NamedAPIResource         `json:item`
+	Version_details []poke_PokemonHeldItemVersion `json:version_details`
+}
+
+type poke_PokemonMove struct {
+	Move                  poke_NamedAPIResource   `json:move`
+	Version_group_details []poke_PokemonMoveVersion `json:version_group_details`
+}
+
+type poke_PokemonTypePast struct {
+	Generation poke_NamedAPIResource `json:generation`
+	Types      []poke_PokemonType    `json:types`
+}
+
+type poke_PokemonAbilityPast struct {
+	Generation poke_NamedAPIResource `json:generation`
+	Abilities  []poke_PokemonAbility `json:abilities`
+}
+
+type poke_PokemonSprites struct {
+	Front_default      string `json:front_default`
+	Front_shiny        string `json:front_shiny`
+	Front_female       string `json:front_female`
+	Front_shiny_female string `json:front_shiny_female`
+
+	Back_default      string `json:back_default`
+	Back_shiny        string `json:back_shiny`
+	Back_female       string `json:back_female`
+	Back_shiny_female string `json:back_shiny_female`
+}
+
+type poke_PokemonCries struct {
+	Latest string `json:latest`
+	Legacy string `json:legacy`
+}
+
+type poke_PokemonStat struct {
+	Stat      poke_NamedAPIResource `json:stat`
+	Effort    int                   `json:effort`
+	Base_stat int                   `json:base_stat`
+}
+
+type poke_PokemonType struct {
+	Slot int                   `json:slot`
+	Type poke_NamedAPIResource `json:type`
+}
+
+type poke_PokemonHeldItemVersion struct {
+	Version poke_NamedAPIResource `json:version`
+	Rarity  int                   `json:rarity`
+}
+
+type poke_PokemonMoveVersion struct {
+	Move_learn_method poke_NamedAPIResource `json:move_learn_method`
+	Version_group     poke_NamedAPIResource `json:version_group`
+	Level_learned_at  int                   `json:level_learned_at`
+	Order             int                   `json:order`
+}
+
 type poke_NamedAPIResource struct {
 	Name string `json:name`
 	Url  string `json:url`

@@ -9,6 +9,7 @@ import (
 	"os"
 	"github.com/Tavis7/bootdev-pokedexcli/internal/pokecache"
 	"time"
+	"math/rand"
 )
 
 const API_URL = "https://pokeapi.co/api/v2/"
@@ -23,6 +24,7 @@ type config struct {
 	next_url string
 	prev_url string
 	cache pokecache.Cache
+	pokedex map[string]poke_Pokemon
 }
 
 var commands map[string]cliCommand
@@ -50,6 +52,16 @@ func main() {
 			description: "List all the pokemon in a location",
 			callback:    commandExplore,
 		},
+		"catch": {
+			name: 	 	 "catch",
+			description: "Try to catch a pokemon",
+			callback:    commandCatch,
+		},
+		"pokedex": {
+			name: 	 	 "pokedex",
+			description: "List pokemon in pokedex",
+			callback:    commandPokedex,
+		},
 		"exit": {
 			name:        "exit",
 			description: "Exit the pokedex",
@@ -63,6 +75,7 @@ func main() {
 		prev_url: "",
 		next_url: API_URL + "location-area/?offset=0&limit=20",
 		cache: pokecache.NewCache(time.Minute * 5),
+		pokedex: make(map[string]poke_Pokemon),
 	}
 	for {
 		fmt.Print("Pokedex > ")
@@ -211,6 +224,66 @@ func commandExplore(conf *config, args []string) error {
 		}
 	} else {
 		fmt.Printf("Didn't find any Pokemon in %v\n", area_name)
+	}
+
+	return nil
+}
+
+func commandCatch(conf *config, args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("Incorrect number of arguments, expecting '%v <pokemon>'", args[0])
+	}
+
+	pokemon_name := args[1]
+
+	pokemon_info := poke_Pokemon{}
+
+	err := fetchAndDecodeJson(API_URL + "pokemon/" + pokemon_name, &pokemon_info, conf.cache)
+	if err != nil {
+		return fmt.Errorf("Couldn't find %v: %w", pokemon_name, err)
+	}
+
+	fmt.Printf("Throwing a Pokeball at %v...\n", pokemon_info.Name)
+
+	chance := (20.0 / float32(pokemon_info.Base_experience))
+	/*
+	fmt.Printf("Base experience: %v\n", pokemon_info.Base_experience)
+	fmt.Printf("Odds: %v%%\n", chance * 100)
+	*/
+
+	if (rand.Float32() > chance) {
+		fmt.Printf("%v escaped!\n", pokemon_info.Name)
+	} else {
+		fmt.Printf("%v was caught!\n", pokemon_info.Name)
+		conf.pokedex[pokemon_info.Name] = pokemon_info
+	}
+
+	return nil
+}
+
+func printPokedexInfo(pokemon poke_Pokemon) {
+	fmt.Printf("Name: %v\n", pokemon.Name)
+	fmt.Printf(" - ID: %v\n", pokemon.Id)
+	fmt.Printf(" - Height: %v\n", pokemon.Height)
+	fmt.Printf(" - Weight: %v\n", pokemon.Weight)
+}
+
+func commandPokedex(conf *config, args []string) error {
+	if len(args) == 2 {
+		pokemon := args[1]
+		info,ok := conf.pokedex[pokemon]
+		if !ok {
+			return fmt.Errorf("%v not found in pokedex", pokemon)
+		}
+		printPokedexInfo(info)
+	} else if len(args) == 1 {
+		for _,info := range conf.pokedex {
+			printPokedexInfo(info)
+		}
+	} else {
+		return fmt.Errorf(
+			"Incorrect number of arguments, expecting '%v [<pokemon>]'",
+			args[0])
 	}
 
 	return nil
