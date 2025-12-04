@@ -268,12 +268,13 @@ func commandCatch(conf *config, args []string) error {
 
 func commandPokedex(conf *config, args []string) error {
 	if len(args) == 1 {
+		fmt.Printf("Your pokedex:\n")
 		for _,pokemon := range conf.pokedex {
 			fmt.Printf(" - %v\n", pokemon.Name)
 		}
 	} else {
 		return fmt.Errorf(
-			"Incorrect number of arguments, expecting '%v [<pokemon>]'",
+			"Incorrect number of arguments, expecting '%v'",
 			args[0])
 	}
 
